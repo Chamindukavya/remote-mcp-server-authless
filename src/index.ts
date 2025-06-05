@@ -4,6 +4,7 @@ import { z } from "zod";
 import sgMail from "@sendgrid/mail";
 
 
+
 // Hardcoded JSON data
 const cvData = {
   "name": "Kavya G.A.C.",
@@ -62,7 +63,6 @@ const cvData = {
   }
 };
 
-// Define MCP agent with CV query and email sending tools
 export class MyMCP extends McpAgent {
   server = new McpServer({
     name: "CV Query and Email Tool",
@@ -71,13 +71,12 @@ export class MyMCP extends McpAgent {
 
   async init() {
     // Set SendGrid API key from environment variable
-    // if (process.env.SENDGRID_API_KEY) {
-    //   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    // } else {
-    //   console.error("SENDGRID_API_KEY is not set in environment variables");
-    // }
+    if (process.env.SENDGRID_API_KEY) {
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    } else {
+      console.error("SENDGRID_API_KEY is not set in environment variables");
+    }
 
-    sgMail.setApiKey("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"); // Replace with your actual SendGrid API key
 
     // Tool to answer questions about the CV
     this.server.tool(
@@ -161,7 +160,7 @@ export class MyMCP extends McpAgent {
             to: cvData.email,
             from: {
               email: from,
-              name: from, // Using sender email as name for simplicity
+              name: from,
             },
             subject,
             text: message,
@@ -191,7 +190,6 @@ export class MyMCP extends McpAgent {
     );
   }
 
-  // Helper function to process CV questions
   private async answerQuestion(question: string): Promise<string> {
     const lowerQuestion = question.toLowerCase();
 
