@@ -1,6 +1,8 @@
 import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import sgMail from "@sendgrid/mail";
+
 
 // Hardcoded JSON data
 const cvData = {
@@ -60,14 +62,23 @@ const cvData = {
   }
 };
 
-// Define MCP agent with a CV query tool
+// Define MCP agent with CV query and email sending tools
 export class MyMCP extends McpAgent {
   server = new McpServer({
-    name: "CV Query Tool",
+    name: "CV Query and Email Tool",
     version: "1.0.0",
   });
 
   async init() {
+    // Set SendGrid API key from environment variable
+    // if (process.env.SENDGRID_API_KEY) {
+    //   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    // } else {
+    //   console.error("SENDGRID_API_KEY is not set in environment variables");
+    // }
+
+    sgMail.setApiKey("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"); // Replace with your actual SendGrid API key
+
     // Tool to answer questions about the CV
     this.server.tool(
       "queryCV",
@@ -76,7 +87,6 @@ export class MyMCP extends McpAgent {
       },
       async ({ question }) => {
         try {
-          // Process the question and extract relevant information from cvData
           let responseText = await this.answerQuestion(question);
           return {
             content: [{ type: "text", text: responseText }],
@@ -93,13 +103,98 @@ export class MyMCP extends McpAgent {
         }
       }
     );
+
+    // Tool to send emails from JSON email to user-provided recipient
+    this.server.tool(
+      "sendEmail",
+      {
+        to: z.string().email().describe("Recipient email address"),
+        subject: z.string().describe("Email subject"),
+        message: z.string().describe("Email body content"),
+      },
+      async ({ to, subject, message }) => {
+        try {
+          const msg = {
+            to,
+            from: {
+              email: cvData.email,
+              name: cvData.name,
+            },
+            subject,
+            text: message,
+            html: `<p>${message}</p>`,
+          };
+
+          await sgMail.send(msg);
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Email sent successfully to ${to}`,
+              },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error sending email: ${error}`,
+              },
+            ],
+          };
+        }
+      }
+    );
+
+    // New tool to send emails from user-provided email to JSON email
+    this.server.tool(
+      "sendToJsonEmail",
+      {
+        from: z.string().email().describe("Sender email address"),
+        subject: z.string().describe("Email subject"),
+        message: z.string().describe("Email body content"),
+      },
+      async ({ from, subject, message }) => {
+        try {
+          const msg = {
+            to: cvData.email,
+            from: {
+              email: from,
+              name: from, // Using sender email as name for simplicity
+            },
+            subject,
+            text: message,
+            html: `<p>${message}</p>`,
+          };
+
+          await sgMail.send(msg);
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Email sent successfully from ${from} to ${cvData.email}`,
+              },
+            ],
+          };
+        } catch (error) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error sending email: ${error}`,
+              },
+            ],
+          };
+        }
+      }
+    );
   }
 
-  // Helper function to process questions and generate responses
+  // Helper function to process CV questions
   private async answerQuestion(question: string): Promise<string> {
     const lowerQuestion = question.toLowerCase();
 
-    // Handle questions about personal info
     if (lowerQuestion.includes("name")) {
       return `The name is ${cvData.name}.`;
     }
@@ -121,19 +216,14 @@ export class MyMCP extends McpAgent {
     if (lowerQuestion.includes("summary") || lowerQuestion.includes("about")) {
       return cvData.summary;
     }
-
-    // Handle questions about education
     if (lowerQuestion.includes("education") || lowerQuestion.includes("university") || lowerQuestion.includes("degree")) {
       return `Studying ${cvData.education.degree} at ${cvData.education.university}, starting ${cvData.education.date}.`;
     }
-
-    // Handle questions about projects
     if (lowerQuestion.includes("project") || lowerQuestion.includes("projects")) {
       const projectNames = cvData.projects.map(p => p.name).join(", ");
       if (lowerQuestion.includes("list") || lowerQuestion.includes("all")) {
         return `Projects include: ${projectNames}.`;
       }
-      // Check for specific project
       for (const project of cvData.projects) {
         if (lowerQuestion.includes(project.name.toLowerCase())) {
           return `${project.name}: ${project.description} Tools used: ${project.tools.join(", ")}. URL: ${project.url}`;
@@ -141,16 +231,13 @@ export class MyMCP extends McpAgent {
       }
       return `Available projects: ${projectNames}. Ask about a specific project for details.`;
     }
-
-    // Handle questions about technologies
     if (lowerQuestion.includes("technologies") || lowerQuestion.includes("skills") || lowerQuestion.includes("languages")) {
       const languages = cvData.technologies.languages.join(", ");
       const frameworks = cvData.technologies.frameworks_and_tools.join(", ");
       return `Programming languages: ${languages}. Frameworks and tools: ${frameworks}.`;
     }
 
-    // Default response for unrecognized questions
-    return "I'm not sure how to answer that. Please ask about my name, location, contact details, education, projects, or technologies.";
+    return "I'm not sure how to answer that. Please ask about my name, location, contact details, education, projects, technologies, or try sending an email.";
   }
 }
 

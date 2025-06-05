@@ -13,7 +13,9 @@
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.12.1",
+		"@sendgrid/mail": "^8.1.5",
 		"agents": "^0.0.94",
+		"dotenv": "^16.5.0",
 		"zod": "^3.25.51"
 	},
 	"devDependencies": {
