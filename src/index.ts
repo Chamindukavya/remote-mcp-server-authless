@@ -18,6 +18,13 @@ export class MyMCP extends McpAgent {
 				content: [{ type: "text", text: String(a + b) }],
 			})
 		);
+		this.server.tool(
+			"substract",
+			{ a: z.number(), b: z.number() },
+			async ({ a, b }) => ({
+				content: [{ type: "text", text: String(a - b) }],
+			})
+		);
 
 		// Calculator tool with multiple operations
 		this.server.tool(
