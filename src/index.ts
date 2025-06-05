@@ -70,12 +70,16 @@ export class MyMCP extends McpAgent {
   });
 
   async init() {
+
     // Set SendGrid API key from environment variable
-    if (process.env.SENDGRID_API_KEY) {
-      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    } else {
-      console.error("SENDGRID_API_KEY is not set in environment variables");
-    }
+    // if (process.env.SENDGRID_API_KEY) {
+    //   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    // } else {
+    //   console.error("SENDGRID_API_KEY is not set in environment variables");
+    // }
+
+
+    sgMail.setApiKey("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");
 
 
     // Tool to answer questions about the CV
